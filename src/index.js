@@ -125,7 +125,7 @@ export default function({types: t}){
                     t.Identifier('module'),
                     t.Identifier('exports')
                 ),
-                t.Identifier(ast.argument.name)
+                ast.argument
             )
         )
     }
