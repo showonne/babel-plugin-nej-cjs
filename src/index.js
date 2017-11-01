@@ -57,7 +57,7 @@ export default function({types: t}){
     function transformDep(dep){
         return dep.replace(/\{(.+)\}\/?/, function(_, name){
             if(name === 'platform'){
-                return './platform'
+                return './platform/'
             }else{
                 return `${name}/`
             }
