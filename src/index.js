@@ -61,7 +61,7 @@ export default function({types: t}){
             }else{
                 return `${name}/`
             }
-        }).replace(/^text!/, '!!text!')
+        }).replace(/^text!/, '!!text-loader!')
     }
 
     /*
