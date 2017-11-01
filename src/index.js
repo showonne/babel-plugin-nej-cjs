@@ -47,8 +47,8 @@ export default function({types: t}){
                         args[0].type === 'ArrayExpression' &&
                         args[1].type === 'FunctionExpression'
                     ){
-                        const deps = args[0].elements.map(element => element.value)
-                        const definition = args[1]
+                        deps = args[0].elements.map(element => element.value)
+                        definition = args[1]
                     }
 
                     const params = definition.params.map(param => param.name)
