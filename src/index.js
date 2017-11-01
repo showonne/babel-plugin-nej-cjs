@@ -1,4 +1,20 @@
 export default function({types: t}){
+
+    const emptyObj = t.ObjectExpression([])
+    const emptyFunc = t.FunctionExpression(
+        null,
+        [],
+        t.BlockStatement([])    
+    )
+    const emptyArray = t.ArrayExpression([])
+
+    const emptyMap = {
+        0: emptyObj,
+        1: emptyObj,
+        2: emptyFunc,
+        3: emptyArray
+    }
+
     return {
         visitor: {
             CallExpression(path){
@@ -19,10 +35,10 @@ export default function({types: t}){
                     const program = path.findParent(path => path.isProgram())
 
                     /* define(function(){}) */
+                    let definition, deps
                     if(args.length === 1 && args[0].type === 'FunctionExpression'){
-                        const definition = args[0]
-
-                        program.node.body = definition.body.body
+                        definition = args[0]
+                        deps = []
                     }
 
                     /* define([], function(){})*/
@@ -33,22 +49,31 @@ export default function({types: t}){
                     ){
                         const deps = args[0].elements.map(element => element.value)
                         const definition = args[1]
-
-                        const params = definition.params.map(param => param.name)
-
-                        program.node.body = definition.body.body
-
-                        const requireStatements = buildRequireStatement(deps, params, this)
-                        Array.prototype.unshift.apply(program.node.body, requireStatements)
                     }
+
+                    const params = definition.params.map(param => param.name)
+
+                    program.node.body = definition.body.body
+
+                    const requireStatements = buildRequireStatement(deps, params, this)
+                    Array.prototype.unshift.apply(program.node.body, requireStatements)
+
+                    let noReturn = true
 
                     program.node.body = program.node.body.map(item => {
                         if(item.type !== 'ReturnStatement'){
                             return item
                         }else{
+                            noReturn = false;
                             return buildExportAST(item)
                         }
                     })
+
+                    if(noReturn){
+                        // auto return
+                        const name = params[deps.length]
+                        program.node.body.push(buildExportAST(t.ReturnStatement(t.Identifier(name))))
+                    }
                 }
             }
         }
@@ -57,11 +82,11 @@ export default function({types: t}){
     function transformDep(dep){
         return dep.replace(/\{(.+)\}\/?/, function(_, name){
             if(name === 'platform'){
-                return './platform/'
+                return './platform'
             }else{
                 return `${name}/`
             }
-        }).replace(/^text!/, '!!text-loader!')
+        }).replace(/^text!/, '!!text!')
     }
 
     /*
@@ -74,7 +99,7 @@ export default function({types: t}){
                 const dep = transformDep(deps[index])
                 return buildRequireAST(dep, param, context)
             }
-            return buildEmptyObjAST(param)
+            return buildEmptyObjAST(param, index - deps.length)
         })
 
         return result
@@ -116,13 +141,16 @@ export default function({types: t}){
         )
     }
 
-    function buildEmptyObjAST(param){
+    
+
+    function buildEmptyObjAST(param, index){
+
         return t.VariableDeclaration(
             "var",
             [
                 t.VariableDeclarator(
                     t.Identifier(param),
-                    t.ObjectExpression([])
+                    emptyMap[index]
                 )
             ]
         )
