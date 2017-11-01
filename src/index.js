@@ -14,22 +14,33 @@ export default function({types: t}){
                         callee.object.name === 'NEJ' &&
                         callee.property.type === 'Identifier' &&
                         callee.property.name === 'define'
-                    ) && 
-                    args.length === 2 &&
-                    args[0].type === 'ArrayExpression' &&
-                    args[1].type === 'FunctionExpression'
+                    )
                 ){
-                    const deps = args[0].elements.map(element => element.value)
-                    const definition = args[1]
-                    const params = definition.params.map(param => param.name)
-
                     const program = path.findParent(path => path.isProgram())
-                    // const program = path.getProgramParent()
 
-                    program.node.body = definition.body.body
+                    /* define(function(){}) */
+                    if(args.length === 1 && args[0].type === 'FunctionExpression'){
+                        const definition = args[0]
 
-                    const requireStatements = buildRequireStatement(deps, params, this)
-                    Array.prototype.unshift.apply(program.node.body, requireStatements)
+                        program.node.body = definition.body.body
+                    }
+
+                    /* define([], function(){})*/
+                    if(
+                        args.length === 2 &&
+                        args[0].type === 'ArrayExpression' &&
+                        args[1].type === 'FunctionExpression'
+                    ){
+                        const deps = args[0].elements.map(element => element.value)
+                        const definition = args[1]
+
+                        const params = definition.params.map(param => param.name)
+
+                        program.node.body = definition.body.body
+
+                        const requireStatements = buildRequireStatement(deps, params, this)
+                        Array.prototype.unshift.apply(program.node.body, requireStatements)
+                    }
 
                     program.node.body = program.node.body.map(item => {
                         if(item.type !== 'ReturnStatement'){
